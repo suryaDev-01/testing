@@ -1,1 +1,41 @@
+---
+- name: Harden Ubuntu Server - Disable Unused Filesystems
+  hosts: all
+  become: yes
+  vars:
+    # List of filesystems and their corresponding config files based on your screenshot
+    filesystems:
+      - { name: 'cramfs',  install_file: 'cramfs.conf',  blacklist_file: 'blacllist_cramfs.conf' }
+      - { name: 'freevxfs', install_file: 'freevxfs.conf', blacklist_file: 'blacllist_freevxfs.conf' }
+      - { name: 'hfs',      install_file: 'hfs.conf',      blacklist_file: 'blacllist_hfs.conf' }
+      - { name: 'hfsplus',  install_file: 'hfsplus.conf',  blacklist_file: 'blacllist_hfsplus.conf' }
+      - { name: 'jffs2',    install_file: 'jffs2.conf',    blacklist_file: 'blacllist_jffs2.conf' }
 
+  tasks:
+    - name: Ensure install directive exists for filesystems
+      copy:
+        dest: "/etc/modprobe.d/{{ item.install_file }}"
+        content: "install {{ item.name }} /bin/false\n"
+        owner: root
+        group: root
+        mode: '0644'
+      loop: "{{ filesystems }}"
+      register: install_results
+
+    - name: Ensure blacklist directive exists for filesystems
+      copy:
+        dest: "/etc/modprobe.d/{{ item.blacklist_file }}"
+        content: "blacklist {{ item.name }}\n"
+        owner: root
+        group: root
+        mode: '0644'
+      loop: "{{ filesystems }}"
+      register: blacklist_results
+
+    - name: List files created or modified by this playbook
+      shell: "ls -ltr /etc/modprobe.d/"
+      register: modprobe_list
+
+    - name: Display the list of files in /etc/modprobe.d/
+      debug:
+        msg: "{{ modprobe_list.stdout_lines }}"
