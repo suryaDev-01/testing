@@ -5,11 +5,11 @@
   vars:
     # List of filesystems and their corresponding config files based on your screenshot
     filesystems:
-      - { name: 'cramfs',  install_file: 'cramfs.conf',  blacklist_file: 'blacllist_cramfs.conf' }
-      - { name: 'freevxfs', install_file: 'freevxfs.conf', blacklist_file: 'blacllist_freevxfs.conf' }
-      - { name: 'hfs',      install_file: 'hfs.conf',      blacklist_file: 'blacllist_hfs.conf' }
-      - { name: 'hfsplus',  install_file: 'hfsplus.conf',  blacklist_file: 'blacllist_hfsplus.conf' }
-      - { name: 'jffs2',    install_file: 'jffs2.conf',    blacklist_file: 'blacllist_jffs2.conf' }
+      - { name: 'cramfs',  install_file: 'cramfs.conf',  blacklist_file: 'blacklist_cramfs.conf' }
+      - { name: 'freevxfs', install_file: 'freevxfs.conf', blacklist_file: 'blacklist_freevxfs.conf' }
+      - { name: 'hfs',      install_file: 'hfs.conf',      blacklist_file: 'blacklist_hfs.conf' }
+      - { name: 'hfsplus',  install_file: 'hfsplus.conf',  blacklist_file: 'blacklist_hfsplus.conf' }
+      - { name: 'jffs2',    install_file: 'jffs2.conf',    blacklist_file: 'blacklist_jffs2.conf' }
 
   tasks:
     - name: Ensure install directive exists for filesystems
