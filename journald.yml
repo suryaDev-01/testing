@@ -1,0 +1,71 @@
+---
+- name: Configure journald settings properly
+  hosts: all
+  become: yes
+  gather_facts: yes
+
+  vars:
+    journald_file: /etc/systemd/journald.conf
+    journald_settings:
+      - "Compress=yes"
+      - "Storage=persistent"
+      - "SystemMaxUse=5M"
+      - "SystemKeepFree=50M"
+      - "RuntimeMaxUse=5M"
+      - "RuntimeKeepFree=50M"
+      - "MaxFileSec=200"
+
+  tasks:
+
+    # 1️⃣ Backup
+    - name: Take the timestamp
+      command: date -I
+      register: timestamp
+    - name: Take backup of journald.conf
+      copy:
+        src: "{{ journald_file }}"
+        dest: "{{ journald_file }}"_bkp_{{ timestamp.stdout }}
+        remote_src: yes
+      register: backup_status
+
+
+    # 2️⃣ Comment existing active entries (if not commented)
+    - name: Comment existing active journald parameters
+      replace:
+        path: "{{ journald_file }}"
+        regexp: '^(?!#)({{ item.split("=")[0] }}=.*)'
+        replace: '# \1'
+      loop: "{{ journald_settings }}"
+      register: comment_status
+
+
+    # 3️⃣ Add required entries at EOF
+    - name: Add journald settings at EOF
+      blockinfile:
+        path: "{{ journald_file }}"
+        block: |
+          {% for item in journald_settings %}
+          {{ item }}
+          {% endfor %}
+        marker: "# {mark} ANSIBLE MANAGED JOURNALD SETTINGS"
+      register: add_status
+
+
+    # 4️⃣ Restart journald only if changed
+    - name: Restart systemd-journald if changes happened
+      systemd:
+        name: systemd-journald
+        state: restarted
+      when: comment_status.changed or add_status.changed
+
+
+    # 5️⃣ Print values after changes
+    - name: Display updated journald settings
+      shell: |
+        grep -Ei "Compress|Storage|SystemMaxUse|SystemKeepFree|RuntimeMaxUse|RuntimeKeepFree|MaxFileSec" {{ journald_file }}
+      register: final_output
+      changed_when: false
+
+    - name: Show final values
+      debug:
+        var: final_output.stdout_lines
