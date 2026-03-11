@@ -1,0 +1,57 @@
+---
+- name: Manage sudoers defaults entries
+  hosts: all
+  become: yes
+
+  vars:
+    sudo_entries:
+      - "Defaults logfile=/var/log/sudo.log"
+      - "Defaults timestamp_timeout=0"
+      - "Defaults use_pty"
+
+  tasks:
+
+  - name: Backup sudoers file
+    copy:
+      src: /etc/sudoers
+      dest: "/etc/sudoers_bkp_{{ ansible_date_time.date }}"
+      remote_src: yes
+      mode: '0440'
+
+  - name: Check existing defaults entries before change
+    shell: grep -i "^Defaults" /etc/sudoers
+    register: before_output
+    ignore_errors: yes
+
+  - name: Display entries before changes
+    debug:
+      msg: "{{ before_output.stdout_lines }}"
+    when: before_output.stdout != ""
+
+  - name: Display message if no entries exist
+    debug:
+      msg: "No entries exists"
+    when: before_output.stdout == ""
+
+  - name: Comment existing active entries
+    replace:
+      path: /etc/sudoers
+      regexp: '^(Defaults\s+(logfile=/var/log/sudo.log|timestamp_timeout=0|use_pty))'
+      replace: '# \1'
+      validate: 'visudo -cf %s'
+
+  - name: Add required entries at EOF
+    lineinfile:
+      path: /etc/sudoers
+      line: "{{ item }}"
+      insertafter: EOF
+      validate: 'visudo -cf %s'
+    loop: "{{ sudo_entries }}"
+
+  - name: Check entries after modification
+    shell: grep -i "Defaults" /etc/sudoers
+    register: after_output
+
+  - name: Display entries after changes
+    debug:
+      var: after_output.stdout_lines
