@@ -1,0 +1,37 @@
+---
+- name: Fix cron permissions
+  hosts: all
+  become: yes
+
+  vars:
+    cron_files:
+      - /etc/crontab
+      - /etc/cron.hourly
+      - /etc/cron.daily
+      - /etc/cron.weekly
+      - /etc/cron.monthly
+      - /etc/cron.d
+
+  tasks:
+
+  - name: Display cron permissions BEFORE change
+    shell: ls -ld {{ cron_files | join(' ') }}
+    register: before_cron
+
+  - name: Show before output
+    debug:
+      var: before_cron.stdout_lines
+
+  - name: Set permission 600 for cron files
+    file:
+      path: "{{ item }}"
+      mode: '0600'
+    loop: "{{ cron_files }}"
+
+  - name: Display cron permissions AFTER change
+    shell: ls -ld {{ cron_files | join(' ') }}
+    register: after_cron
+
+  - name: Show after output
+    debug:
+      var: after_cron.stdout_lines
