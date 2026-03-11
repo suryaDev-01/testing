@@ -1,0 +1,40 @@
+---
+- name: Fix log file ownership
+  hosts: all
+  become: yes
+
+  vars:
+    log_files:
+      - /var/log/lastlog
+      - /var/log/wtmp
+      - /var/log/wtmp.1
+      - /var/log/btmp
+      - /var/log/btmp.1
+
+  tasks:
+
+  - name: Display log file status BEFORE change
+    shell: ls -ltd {{ log_files | join(' ') }}
+    register: before_logs
+    ignore_errors: yes
+
+  - name: Show before output
+    debug:
+      var: before_logs.stdout_lines
+
+  - name: Set ownership root:root
+    file:
+      path: "{{ item }}"
+      owner: root
+      group: root
+    loop: "{{ log_files }}"
+    ignore_errors: yes
+
+  - name: Display log file status AFTER change
+    shell: ls -ltd {{ log_files | join(' ') }}
+    register: after_logs
+    ignore_errors: yes
+
+  - name: Show after output
+    debug:
+      var: after_logs.stdout_lines
