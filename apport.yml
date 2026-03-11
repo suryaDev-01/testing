@@ -1,0 +1,56 @@
+---
+- name: Manage apport configuration
+  hosts: all
+  become: yes
+
+  tasks:
+
+  - name: Check if apport config file exists
+    stat:
+      path: /etc/default/apport
+    register: apport_file
+
+  - name: Install apport if file does not exist
+    apt:
+      name: apport
+      state: present
+      update_cache: yes
+    when: not apport_file.stat.exists
+
+  - name: Start apport service
+    service:
+      name: apport
+      state: started
+      enabled: yes
+
+  - name: Display apport service status
+    shell: systemctl status apport | head -10
+    register: apport_status
+
+  - name: Show service status
+    debug:
+      var: apport_status.stdout_lines
+
+  - name: Backup apport config with timestamp
+    copy:
+      src: /etc/default/apport
+      dest: "/etc/default/apport_{{ ansible_date_time.date }}_{{ ansible_date_time.time }}"
+      remote_src: yes
+    when: apport_file.stat.exists
+
+  - name: Check enabled parameter
+    shell: grep '^enabled=' /etc/default/apport
+    register: enabled_value
+    ignore_errors: yes
+
+  - name: Change enabled=0 to enabled=1
+    replace:
+      path: /etc/default/apport
+      regexp: '^enabled=0'
+      replace: 'enabled=1'
+    when: "'enabled=0' in enabled_value.stdout"
+
+  - name: Display message if already enabled
+    debug:
+      msg: "Apport already enabled (enabled=1). No change required."
+    when: "'enabled=1' in enabled_value.stdout"
