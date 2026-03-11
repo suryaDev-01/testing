@@ -1,0 +1,79 @@
+---
+- name: Package Installation and Removal Check
+  hosts: all
+  become: yes
+
+  vars:
+    install_packages:
+      - aide
+      - apparmor-utils
+      - chrony
+
+    remove_packages:
+      - telnet
+      - tnftp
+
+  tasks:
+
+  - name: Install required packages
+    apt:
+      name: "{{ item }}"
+      state: present
+      update_cache: yes
+    loop: "{{ install_packages }}"
+    register: install_result
+
+  - name: Show install status
+    debug:
+      msg: >
+        Package {{ item.item }} was installed now.
+    when: item.changed
+    loop: "{{ install_result.results }}"
+
+  - name: Show already installed packages
+    debug:
+      msg: >
+        Package {{ item.item }} is already installed.
+    when: not item.changed
+    loop: "{{ install_result.results }}"
+
+  - name: Remove unwanted packages
+    apt:
+      name: "{{ item }}"
+      state: absent
+      purge: yes
+    loop: "{{ remove_packages }}"
+    register: remove_result
+
+  - name: Show removed packages
+    debug:
+      msg: >
+        Package {{ item.item }} was removed.
+    when: item.changed
+    loop: "{{ remove_result.results }}"
+
+  - name: Show already absent packages
+    debug:
+      msg: >
+        Package {{ item.item }} is already absent.
+    when: not item.changed
+    loop: "{{ remove_result.results }}"
+
+  - name: Start and enable chrony service
+    service:
+      name: chrony
+      state: started
+      enabled: yes
+
+  - name: Gather service facts
+    service_facts:
+
+  - name: Display Chrony service status
+    debug:
+      msg: "Chrony service state: {{ ansible_facts.services['chrony.service'].state }}"
+    when: "'chrony.service' in ansible_facts.services"
+
+  - name: Display AIDE service status
+    debug:
+      msg: "AIDE service state: {{ ansible_facts.services['aide.service'].state }}"
+    when: "'aide.service' in ansible_facts.services"
